@@ -9,6 +9,7 @@ local onh = 0
 local eons = 0.000
 local eoffs = 0.000
 local tons = 0.000
+local QUEUE_WINDOW = 0.4
 
 if not(AttackBarDB) then AttackBarDB = { } end
 
@@ -164,13 +165,23 @@ function Abar_reset()
   local onid = 0
   local offid = 0
 end
-
+function clearBars()
+    Abar_Mhr:Hide()
+    Abar_Oh:Hide()
+    ebar_mh:Hide()
+    ebar_oh:Hide()
+end
 function Abar_event(event)
+  if event == "PLAYER_TARGET_CHANGED" then
+    Abar_reset()
+    clearBars()
+  end
   if (event == "CHAT_MSG_COMBAT_SELF_MISSES" or event == "CHAT_MSG_COMBAT_SELF_HITS") 
       and AttackBarDB.melee == true then 
     Abar_selfhit(arg1) 
   end
   if event == "PLAYER_LEAVE_COMBAT" then Abar_reset() end
+  if event == "PLAYER_REGEN_ENABLED" then Abar_reset() end
   if event == "VARIABLES_LOADED" then Abar_loaded() end
   if event == "CHAT_MSG_SPELL_SELF_DAMAGE" then Abar_spellhit(arg1) end
   if event == "VARIABLES_LOADED" then Abar_loaded() end
@@ -203,36 +214,40 @@ function Abar_selfhit(arg1)
 end
 
 function Abar_meleeHit()
-    ons, offs = UnitAttackSpeed("player")
 
-    if offs then
-      ont, offt = GetTime(), GetTime()
-      if ((math.abs((ont - pont) - ons) <= math.abs((offt - pofft) - offs)) and not(onh <= offs / ons)) 
-          or offh >= ons / offs then
-        if pofft == 0 then pofft = offt end
-        pont = ont
-        tons = ons
-        offh = 0
-        onh = onh + 1
-        ons = ons - math.mod(ons, 0.01)
-        Abar_Mhrs(tons, "["..ons.."] ", AttackBarDB.r, AttackBarDB.g, AttackBarDB.b)
-      else
-        pofft = offt
-        offh = offh + 1
-        onh = 0
-        offs = offs - math.mod(offs, 0.01)
-        Abar_Ohs(offs, "["..offs.."] ", AttackBarDB.r, AttackBarDB.g, AttackBarDB.b)
-      end
-    else
-      ont = GetTime()
-      tons = ons
-      ons = ons - math.mod(ons, 0.01)
-      Abar_Mhrs(tons, "["..ons.."] ", AttackBarDB.r, AttackBarDB.g, AttackBarDB.b)
+    if isTargetDeadOrNotValid() then
+      clearBars() 
+      return
     end
-    tons = 0.000
+
+    local mhSpeed, ohSpeed = UnitAttackSpeed("player")
+    local now = GetTime()
+
+    local mhNext = pont + mhSpeed
+    local ohNext = pofft + (ohSpeed or 0)
+
+    -- determine which swing actually fired
+    if ohSpeed and math.abs(now - ohNext) < math.abs(now - mhNext) then
+        -- OFFHAND
+        pofft = now
+        ohSpeed = ohSpeed - math.mod(ohSpeed, 0.01)
+        Abar_Ohs(ohSpeed, "["..ohSpeed.."] ", AttackBarDB.r, AttackBarDB.g, AttackBarDB.b)
+
+    else
+        -- MAINHAND
+        pont = now
+        mhSpeed = mhSpeed - math.mod(mhSpeed, 0.01)
+        Abar_Mhrs(mhSpeed, "["..mhSpeed.."] ", AttackBarDB.r, AttackBarDB.g, AttackBarDB.b)
+
+    end
 end
 
 function Abar_spellhit(arg1)
+
+  if isTargetDeadOrNotValid() then
+      return
+  end
+
   local a, b, spell = string.find(arg1, "Your (.+) hits")
   if not spell then a, b, spell = string.find(arg1, "Your (.+) crits") end
   if not spell then a, b, spell = string.find(arg1, "Your (.+) is") end
@@ -292,25 +307,50 @@ function abar_spelldir(spellname)
     end
   end
 end
-
+  
 function Abar_Update()
-  local ttime = GetTime()
-  local left = 0.0
+
+  if not UnitExists("target") or UnitIsDeadOrGhost("target") then
+    Abar_reset()
+    Abar_Mhr:Hide()
+    Abar_Oh:Hide()
+    ebar_mh:Hide()
+    ebar_oh:Hide()
+    return
+  end
+
+  local now = GetTime()
+  local left = this.et - now
+  left = math.max(left, 0)
+
   local tSpark = getglobal(this:GetName() .. "Spark")
   local tText = getglobal(this:GetName() .. "Tmr")
+
+-- HEROIC STRIKE QUEUE WINDOW (dual-color)
+if this == Abar_Mhr then -- only mainhand
+    if left <= QUEUE_WINDOW then
+        this:SetStatusBarColor(1, 0, 0)           -- red: queue now
+    elseif left <= QUEUE_WINDOW + 0.4 then
+        this:SetStatusBarColor(1, 0.6, 0)         -- orange: pre-queue warning
+    else
+        this:SetStatusBarColor(AttackBarDB.r, AttackBarDB.g, AttackBarDB.b) -- normal
+    end
+else
+    this:SetStatusBarColor(AttackBarDB.r, AttackBarDB.g, AttackBarDB.b) -- offhand stays normal
+end
+
   if AttackBarDB.timer == true then
-    left = (this.et - GetTime()) - (math.mod((this.et - GetTime()), .01))
-    left = math.floor(left*10) / 10
-    tText:SetText(left)
+    local display = math.floor(left * 10) / 10
+    tText:SetText(display)
     tText:Show()
   else
     tText:Hide()
   end
 
-  this:SetValue(ttime)
-  tSpark:SetPoint("CENTER", this, "LEFT",(ttime - this.st) /(this.et - this.st) * 195, 2);
+  this:SetValue(now)
+  tSpark:SetPoint("CENTER", this, "LEFT",(now - this.st) /(this.et - this.st) * 195, 2);
 
-  if ttime >= this.et then
+  if now >= this.et then
     this:Hide()
     tSpark:SetPoint("CENTER", this, "LEFT", 195, 2);
   end
@@ -369,6 +409,12 @@ function ebar_event(event)
 end
 
 function ebar_start(arg1)
+
+  if isTargetDeadOrNotValid() then
+    clearBars()
+    return
+  end
+
   local a
   local b
   local hitter = nil
@@ -382,7 +428,7 @@ end
 function ebar_set(targ)
   eons, eoffs = UnitAttackSpeed("target")
   eons = eons - math.mod(eons, 0.01)
-  ebar_mhs(eons, "Target " .. " [" .. eons .. "s]", 1, .1, .1)
+  ebar_mhs(eons, "[" .. eons .. "s]", 1, .1, .1)
 end
 
 function ebar_mhs(bartime, text, r, g, b)
@@ -407,4 +453,9 @@ function ebar_ohs(bartime, text, r, g, b)
   ebar_oh:SetMinMaxValues(ebar_oh.st, ebar_oh.et)
   ebar_oh:SetValue(ebar_oh.st)
   ebar_oh:Show()
+end
+
+
+function isTargetDeadOrNotValid()
+  return UnitExists("target") and UnitIsDeadOrGhost("target")
 end
