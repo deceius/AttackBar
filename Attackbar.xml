@@ -7,6 +7,7 @@
         this:RegisterEvent("CHAT_MSG_COMBAT_SELF_MISSES");
         this:RegisterEvent("CHAT_MSG_COMBAT_SELF_HITS");
         this:RegisterEvent("PLAYER_LEAVE_COMBAT")
+        this:RegisterEvent("PLAYER_REGEN_ENABLED")
         this:RegisterEvent("VARIABLES_LOADED")
         this:RegisterEvent("CHAT_MSG_SPELL_SELF_DAMAGE")
         this:RegisterEvent("UNIT_SPELLCAST_SENT")
@@ -14,6 +15,8 @@
         this:RegisterEvent("CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES");
         this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_HITS")
         this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES")
+        this:RegisterEvent("CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES")
+        this:RegisterEvent("PLAYER_TARGET_CHANGED")
       </OnLoad>
       <OnEvent>
         Abar_event(event)
