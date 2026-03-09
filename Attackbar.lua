@@ -23,6 +23,7 @@ function Abar_loaded()
   if AttackBarDB.timer == nil then AttackBarDB.timer = true end
   if AttackBarDB.mob == nil then AttackBarDB.mob = true end
   if AttackBarDB.pvp == nil then AttackBarDB.pvp = true end
+  if AttackBarDB.enemy == nil then AttackBarDB.enemy = true end
   if AttackBarDB.text == nil then AttackBarDB.pvp = "standard" end
   if AttackBarDB.r == nil then AttackBarDB.r = 0 end
   if AttackBarDB.g == nil then AttackBarDB.g = 0 end
@@ -80,6 +81,9 @@ function Abar_chat(msg)
   elseif msg == "unlock" then
     Abar_Frame:Show()
     ebar_Frame:Show()
+  elseif msg == "enemy" then
+    AttackBarDB.enemy = not(AttackBarDB.enemy)
+    DEFAULT_CHAT_FRAME:AddMessage('range is ' .. Abar_Boo(AttackBarDB.range));
   elseif msg == "range" then
     AttackBarDB.range = not(AttackBarDB.range)
     DEFAULT_CHAT_FRAME:AddMessage('range is ' .. Abar_Boo(AttackBarDB.range));
@@ -171,20 +175,34 @@ function clearBars()
     ebar_mh:Hide()
     ebar_oh:Hide()
 end
+
 function Abar_event(event)
   if event == "PLAYER_TARGET_CHANGED" then
     Abar_reset()
     clearBars()
   end
-  if (event == "CHAT_MSG_COMBAT_SELF_MISSES" or event == "CHAT_MSG_COMBAT_SELF_HITS") 
-      and AttackBarDB.melee == true then 
-    Abar_selfhit(arg1) 
+
+  if AttackBarDB.melee == true then
+    -- PARRY HASTE DETECTION
+    
+    if (event == "CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES") or 
+        (event == "CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE") or 
+        (event == "CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES") or 
+        (event == "CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE") then
+		  if string.find(arg1, "You parry") then
+           DEFAULT_CHAT_FRAME:AddMessage("Parry Haste Triggered!")
+           Abar_ParryHaste()
+       end
+    end
+
+    if (event == "CHAT_MSG_COMBAT_SELF_MISSES" or event == "CHAT_MSG_COMBAT_SELF_HITS") and arg1 then
+        Abar_selfhit(arg1)
+    end
   end
-  if event == "PLAYER_LEAVE_COMBAT" then Abar_reset() end
-  if event == "PLAYER_REGEN_ENABLED" then Abar_reset() end
+
+  if event == "PLAYER_LEAVE_COMBAT" or event == "PLAYER_REGEN_ENABLED" then Abar_reset() end
   if event == "VARIABLES_LOADED" then Abar_loaded() end
   if event == "CHAT_MSG_SPELL_SELF_DAMAGE" then Abar_spellhit(arg1) end
-  if event == "VARIABLES_LOADED" then Abar_loaded() end
   if event == "UNIT_SPELLCAST_SENT" then abar_spelldir(arg2) end
 end
 
@@ -211,6 +229,35 @@ function Abar_selfhit(arg1)
   else
     Abar_meleeHit()
   end
+end
+
+function Abar_ParryHaste()
+    local now = GetTime()
+    -- Only affect the Main Hand bar if it is currently visible/active
+    if Abar_Mhr:IsVisible() and Abar_Mhr.et then
+        local mhSpeed, _ = UnitAttackSpeed("player")
+        local remaining = Abar_Mhr.et - now
+        
+        if remaining > 0 then
+            local reduction = mhSpeed * 0.4
+            local minRemaining = mhSpeed * 0.2
+            
+            -- New remaining time cannot be less than 20% of weapon speed
+            local newRemaining = remaining - reduction
+            if newRemaining < minRemaining then
+                newRemaining = minRemaining
+            end
+            
+            -- Adjust the end time
+            Abar_Mhr.et = now + newRemaining
+            -- Update the status bar range so the "spark" moves correctly
+            Abar_Mhr:SetMinMaxValues(Abar_Mhr.st, Abar_Mhr.et)
+            
+            -- Update the internal tracking variable 'pont' 
+            -- so the next swing calculation stays in sync
+            pont = Abar_Mhr.et - mhSpeed
+        end
+    end
 end
 
 function Abar_meleeHit()
@@ -365,6 +412,11 @@ function Abar_Mhrs(bartime, text, r, g, b)
   Abar_MhrText:SetText(text)
   Abar_Mhr:SetMinMaxValues(Abar_Mhr.st, Abar_Mhr.et)
   Abar_Mhr:SetValue(Abar_Mhr.st)
+  if Abar_Oh:IsVisible() then
+    Abar_Mhr:SetPoint("LEFT", Abar_Frame, "TOPLEFT", 6, -35)
+  else
+    Abar_Mhr:SetPoint("LEFT", Abar_Frame, "TOPLEFT", 6, -13)
+  end
   Abar_Mhr:Show()
 end
 
@@ -398,6 +450,7 @@ function ebar_VL()
 end
 
 function ebar_event(event)
+  if not AttackBarDB.enemy then return end
   if event == "VARIABLES_LOADED" then
     ebar_VL()
   end

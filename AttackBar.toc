@@ -1,5 +1,5 @@
 ## Interface: 11200
-## Title: AttackBar |cff7fff7f TurtleWOW|r
+## Title: |cff7fff7f [D]|r AttackBar |cff7fff7f TurtleWOW|r
 ## Version: 5.0.8d
 ## Author: Sivent | forked by Deceius
 ## LegacyAuthor: Udokus
