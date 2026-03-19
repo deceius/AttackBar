@@ -83,7 +83,7 @@ function Abar_chat(msg)
     ebar_Frame:Show()
   elseif msg == "enemy" then
     AttackBarDB.enemy = not(AttackBarDB.enemy)
-    DEFAULT_CHAT_FRAME:AddMessage('show enemy bar is ' .. Abar_Boo(AttackBarDB.range));
+    DEFAULT_CHAT_FRAME:AddMessage('show enemy bar is ' .. Abar_Boo(AttackBarDB.enemy));
   elseif msg == "debug" then
     AttackBarDB.debug = not(AttackBarDB.debug)
     DEFAULT_CHAT_FRAME:AddMessage('debug is ' .. Abar_Boo(AttackBarDB.debug));
