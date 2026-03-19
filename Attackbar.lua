@@ -83,7 +83,10 @@ function Abar_chat(msg)
     ebar_Frame:Show()
   elseif msg == "enemy" then
     AttackBarDB.enemy = not(AttackBarDB.enemy)
-    DEFAULT_CHAT_FRAME:AddMessage('range is ' .. Abar_Boo(AttackBarDB.range));
+    DEFAULT_CHAT_FRAME:AddMessage('show enemy bar is ' .. Abar_Boo(AttackBarDB.range));
+  elseif msg == "debug" then
+    AttackBarDB.debug = not(AttackBarDB.debug)
+    DEFAULT_CHAT_FRAME:AddMessage('debug is ' .. Abar_Boo(AttackBarDB.range));
   elseif msg == "range" then
     AttackBarDB.range = not(AttackBarDB.range)
     DEFAULT_CHAT_FRAME:AddMessage('range is ' .. Abar_Boo(AttackBarDB.range));
@@ -177,21 +180,21 @@ function clearBars()
 end
 
 function Abar_event(event)
+  if AttackBarDB.debug then DEFAULT_CHAT_FRAME:AddMessage("Event Triggered: " .. event) end
   if event == "PLAYER_TARGET_CHANGED" then
     Abar_reset()
     clearBars()
   end
 
   if AttackBarDB.melee == true then
-    -- PARRY HASTE DETECTION
     
     if (event == "CHAT_MSG_COMBAT_CREATURE_VS_SELF_MISSES") or 
         (event == "CHAT_MSG_SPELL_CREATURE_VS_SELF_DAMAGE") or 
         (event == "CHAT_MSG_COMBAT_HOSTILEPLAYER_MISSES") or 
         (event == "CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE") then
 		  if string.find(arg1, "You parry") then
-           DEFAULT_CHAT_FRAME:AddMessage("Parry Haste Triggered!")
-           Abar_ParryHaste()
+        DEFAULT_CHAT_FRAME:AddMessage("Parry Haste Triggered!")
+        Abar_ParryHaste()
        end
     end
 
@@ -202,8 +205,12 @@ function Abar_event(event)
 
   if event == "PLAYER_LEAVE_COMBAT" or event == "PLAYER_REGEN_ENABLED" then Abar_reset() end
   if event == "VARIABLES_LOADED" then Abar_loaded() end
-  if event == "CHAT_MSG_SPELL_SELF_DAMAGE" then Abar_spellhit(arg1) end
-  if event == "UNIT_SPELLCAST_SENT" then abar_spelldir(arg2) end
+  if event == "CHAT_MSG_SPELL_SELF_DAMAGE" then 
+    Abar_spellhit(arg1) 
+  end
+  if event == "UNIT_SPELLCAST_SENT" then 
+    abar_spelldir(arg2) 
+  end
 end
 
 function changeBarColor(restore)
