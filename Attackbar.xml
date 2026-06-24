@@ -211,6 +211,10 @@
     </Scripts>
   </Frame>
 
-  <StatusBar name="ebar_mh" inherits="AbarBar" parent="UIParent"/>
-  <StatusBar name="ebar_oh" inherits="AbarBar" parent="UIParent"/>
+  <StatusBar name="ebar_mh" inherits="AbarBar" parent="UIParent">
+    <BarColor r="1.0" g="0" b="0"/>
+  </StatusBar>
+  <StatusBar name="ebar_oh" inherits="AbarBar" parent="UIParent">
+    <BarColor r="1.0" g="0" b="0"/>
+  </StatusBar>
 </Ui>

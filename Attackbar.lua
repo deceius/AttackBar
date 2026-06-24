@@ -148,6 +148,13 @@ function Abar_chat(msg)
     ColorPickerFrame:Hide();
     ColorPickerFrame:Show();
 
+  elseif msg == "testoh" then
+    Abar_Ohs(2, "OFFHAND TEST", 1, 0, 0)
+    DEFAULT_CHAT_FRAME:AddMessage('Abar: showing OFFHAND test')
+  elseif msg == "testmh" then
+    Abar_Mhrs(2, "MAINHAND TEST", 0, 1, 0)
+    DEFAULT_CHAT_FRAME:AddMessage('Abar: showing MAINHAND test')
+
   else
     DEFAULT_CHAT_FRAME:AddMessage('Abar options:');
     DEFAULT_CHAT_FRAME:AddMessage('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~');
@@ -165,10 +172,11 @@ function Abar_chat(msg)
 end
 
 function Abar_reset()
-  pont = 0.000
-  pofft = 0.000
-  ont = 0.000
-  offt = 0.000
+  local now = GetTime()
+  pont = now
+  pofft = now
+  ont = now
+  offt = now
   local onid = 0
   local offid = 0
 end
@@ -199,6 +207,7 @@ function Abar_event(event)
     end
 
     if (event == "CHAT_MSG_COMBAT_SELF_MISSES" or event == "CHAT_MSG_COMBAT_SELF_HITS") and arg1 then
+        if AttackBarDB.debug then DEFAULT_CHAT_FRAME:AddMessage("Abar_event: self combat msg: "..tostring(arg1)) end
         Abar_selfhit(arg1)
     end
   end
@@ -231,6 +240,7 @@ function Abar_selfhit(arg1)
   if not spell then a, b, spell = string.find(arg1, "Your (.+) is") end
   if not spell then a, b, spell = string.find(arg1, "Your (.+) misses") end
 
+  if AttackBarDB.debug then DEFAULT_CHAT_FRAME:AddMessage("Abar_selfhit: parsed spell='"..tostring(spell).."'") end
   if spell then 
     Abar_spellhit(spell)
   else
@@ -279,13 +289,32 @@ function Abar_meleeHit()
 
     local mhNext = pont + mhSpeed
     local ohNext = pofft + (ohSpeed or 0)
+    -- If stored last-swing timestamps are stale (far in the past), adjust them
+    if ohSpeed then
+      if (pofft or 0) + ohSpeed < now - 1 then
+        if AttackBarDB.debug then DEFAULT_CHAT_FRAME:AddMessage("Abar_meleeHit: adjusting stale pofft from "..tostring(pofft) .. " to "..tostring(now - ohSpeed)) end
+        pofft = now - ohSpeed
+        ohNext = pofft + ohSpeed
+      end
+    end
+    if (pont or 0) + mhSpeed < now - 1 then
+      if AttackBarDB.debug then DEFAULT_CHAT_FRAME:AddMessage("Abar_meleeHit: adjusting stale pont from "..tostring(pont) .. " to "..tostring(now - mhSpeed)) end
+      pont = now - mhSpeed
+      mhNext = pont + mhSpeed
+    end
+
+    if AttackBarDB.debug then
+      DEFAULT_CHAT_FRAME:AddMessage("Abar_meleeHit: mhSpeed="..tostring(mhSpeed).." ohSpeed="..tostring(ohSpeed).." pont="..tostring(pont).." pofft="..tostring(pofft).." now="..tostring(now))
+      DEFAULT_CHAT_FRAME:AddMessage("Abar_meleeHit: mhNext="..tostring(mhNext).." ohNext="..tostring(ohNext).." diffMH="..tostring(math.abs(now-mhNext)).." diffOH="..tostring(math.abs(now-ohNext)))
+    end
 
     -- determine which swing actually fired
     if ohSpeed and math.abs(now - ohNext) < math.abs(now - mhNext) then
         -- OFFHAND
-        pofft = now
-        ohSpeed = ohSpeed - math.mod(ohSpeed, 0.01)
-        Abar_Ohs(ohSpeed, "["..ohSpeed.."] ", AttackBarDB.r, AttackBarDB.g, AttackBarDB.b)
+      pofft = now
+      ohSpeed = ohSpeed - math.mod(ohSpeed, 0.01)
+      if AttackBarDB.debug then DEFAULT_CHAT_FRAME:AddMessage("Abar_meleeHit: OFFHAND fired, ohSpeed="..tostring(ohSpeed)) end
+      Abar_Ohs(ohSpeed, "["..ohSpeed.."] ", AttackBarDB.r, AttackBarDB.g, AttackBarDB.b)
 
     else
         -- MAINHAND
@@ -389,8 +418,10 @@ if this == Abar_Mhr then -- only mainhand
     else
         this:SetStatusBarColor(AttackBarDB.r, AttackBarDB.g, AttackBarDB.b) -- normal
     end
+elseif this == ebar_mh then
+    this:SetStatusBarColor(1.0, 0, 0) -- ebar stays red
 else
-    this:SetStatusBarColor(AttackBarDB.r, AttackBarDB.g, AttackBarDB.b) -- offhand stays normal
+    this:SetStatusBarColor(AttackBarDB.r, AttackBarDB.g, AttackBarDB.b)
 end
 
   if AttackBarDB.timer == true then
@@ -419,11 +450,8 @@ function Abar_Mhrs(bartime, text, r, g, b)
   Abar_MhrText:SetText(text)
   Abar_Mhr:SetMinMaxValues(Abar_Mhr.st, Abar_Mhr.et)
   Abar_Mhr:SetValue(Abar_Mhr.st)
-  if Abar_Oh:IsVisible() then
-    Abar_Mhr:SetPoint("LEFT", Abar_Frame, "TOPLEFT", 6, -35)
-  else
-    Abar_Mhr:SetPoint("LEFT", Abar_Frame, "TOPLEFT", 6, -13)
-  end
+  -- Main-hand should always anchor above the offhand
+  Abar_Mhr:SetPoint("LEFT", Abar_Frame, "TOPLEFT", 6, -13)
   Abar_Mhr:Show()
 end
 
@@ -436,6 +464,10 @@ function Abar_Ohs(bartime, text, r, g, b)
   Abar_OhText:SetText(text)
   Abar_Oh:SetMinMaxValues(Abar_Oh.st, Abar_Oh.et)
   Abar_Oh:SetValue(Abar_Oh.st)
+  -- Ensure offhand bar anchored correctly and keep main-hand above it
+  Abar_Oh:SetPoint("LEFT", Abar_Frame, "TOPLEFT", 6, -35)
+  Abar_Mhr:SetPoint("LEFT", Abar_Frame, "TOPLEFT", 6, -13)
+  if AttackBarDB.debug then DEFAULT_CHAT_FRAME:AddMessage("Abar_Ohs called: st="..tostring(Abar_Oh.st).." et="..tostring(Abar_Oh.et).." text="..tostring(text)) end
   Abar_Oh:Show()
 end
 
@@ -450,10 +482,10 @@ end
 function ebar_VL()
   ebar_mh:SetPoint("LEFT", ebar_Frame, "TOPLEFT", 6, -13)
   ebar_oh:SetPoint("LEFT", ebar_Frame, "TOPLEFT", 6, -35)
-  ebar_mhText:SetJustifyH("Left")
-  ebar_mhTmr:SetJustifyH("Left")
-  ebar_ohText:SetJustifyH("Left")
-  ebar_ohTmr:SetJustifyH("Left")
+  ebar_mhText:SetJustifyH("RIGHT")
+  ebar_mhTmr:SetJustifyH("LEFT")
+  ebar_ohText:SetJustifyH("RIGHT")
+  ebar_ohTmr:SetJustifyH("LEFT")
 end
 
 function ebar_event(event)
@@ -488,7 +520,7 @@ end
 function ebar_set(targ)
   eons, eoffs = UnitAttackSpeed("target")
   eons = eons - math.mod(eons, 0.01)
-  ebar_mhs(eons, "[" .. eons .. "s]", 1, .1, .1)
+  ebar_mhs(eons, "[" .. eons .. "]", 1, 0, 0)
 end
 
 function ebar_mhs(bartime, text, r, g, b)
@@ -503,19 +535,19 @@ function ebar_mhs(bartime, text, r, g, b)
   ebar_mh:Show()
 end
 
-function ebar_ohs(bartime, text, r, g, b)
-  ebar_oh:Hide()
-  ebar_oh.txt = text
-  ebar_oh.st = GetTime()
-  ebar_oh.et = GetTime() + bartime
-  ebar_oh:SetStatusBarColor(r, g, b)
-  ebar_ohText:SetText(text)
-  ebar_oh:SetMinMaxValues(ebar_oh.st, ebar_oh.et)
-  ebar_oh:SetValue(ebar_oh.st)
-  ebar_oh:Show()
-end
+-- function ebar_ohs(bartime, text, r, g, b)
+--   ebar_oh:Hide()
+--   ebar_oh.txt = text
+--   ebar_oh.st = GetTime()
+--   ebar_oh.et = GetTime() + bartime
+--   ebar_oh:SetStatusBarColor(r, g, b)
+--   ebar_ohText:SetText(text)
+--   ebar_oh:SetMinMaxValues(ebar_oh.st, ebar_oh.et)
+--   ebar_oh:SetValue(ebar_oh.st)
+--   ebar_oh:Show()
+-- end
 
 
 function isTargetDeadOrNotValid()
-  return UnitExists("target") and UnitIsDeadOrGhost("target")
+  return (not UnitExists("target")) or UnitIsDeadOrGhost("target")
 end
