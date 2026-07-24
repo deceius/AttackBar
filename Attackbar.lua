@@ -535,17 +535,17 @@ function ebar_mhs(bartime, text, r, g, b)
   ebar_mh:Show()
 end
 
--- function ebar_ohs(bartime, text, r, g, b)
---   ebar_oh:Hide()
---   ebar_oh.txt = text
---   ebar_oh.st = GetTime()
---   ebar_oh.et = GetTime() + bartime
---   ebar_oh:SetStatusBarColor(r, g, b)
---   ebar_ohText:SetText(text)
---   ebar_oh:SetMinMaxValues(ebar_oh.st, ebar_oh.et)
---   ebar_oh:SetValue(ebar_oh.st)
---   ebar_oh:Show()
--- end
+function ebar_ohs(bartime, text, r, g, b)
+  ebar_oh:Hide()
+  ebar_oh.txt = text
+  ebar_oh.st = GetTime()
+  ebar_oh.et = GetTime() + bartime
+  ebar_oh:SetStatusBarColor(r, g, b)
+  ebar_ohText:SetText(text)
+  ebar_oh:SetMinMaxValues(ebar_oh.st, ebar_oh.et)
+  ebar_oh:SetValue(ebar_oh.st)
+  ebar_oh:Show()
+end
 
 
 function isTargetDeadOrNotValid()
